@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vaccinations — MediCare HMS</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="logo-sm">🏥</div>
+      <h1>MediCare HMS</h1>
+    </div>
+    <div class="header-right">
+      <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="name" id="user-name">Loading…</div>
+          <div class="role" id="user-role-label">—</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="app-sidebar">
+    <div class="sidebar-section"><div class="sidebar-section-label">Navigation</div></div>
+    <a class="nav-link" href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+    <a class="nav-link" href="patient.html"><span class="nav-icon">👤</span> Patients</a>
+    <a class="nav-link active" href="vaccination.html"><span class="nav-icon">💉</span> Vaccinations</a>
+    <div class="sidebar-bottom">
+      <a class="nav-link" href="index.html"><span class="nav-icon">🏠</span> Home</a>
+      <a class="nav-link" href="#" onclick="logout()"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="app-main">
+    <div class="page-header">
+      <h2>💉 Vaccination Records</h2>
+      <p id="page-desc">Manage and view all vaccination records.</p>
+    </div>
+
+    <!-- NURSE/ADMIN TOOLBAR -->
+    <div class="toolbar" id="toolbar-area">
+      <div class="search-bar">
+        <span class="icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search by patient or vaccine…" />
+      </div>
+      <button class="btn btn-primary" id="add-vacc-btn" onclick="openAddVaccination()">💉 Record Vaccination</button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card">
+      <div class="card-header">
+        <h3 id="table-title">All Vaccinations</h3>
+        <span id="vacc-count" style="font-size:13px;color:var(--text-muted)">Loading…</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Vaccine</th>
+              <th>Dose #</th>
+              <th>Batch/Lot</th>
+              <th>Administered By</th>
+              <th>Date</th>
+              <th>Next Due</th>
+              <th id="action-col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="vacc-tbody">
+            <tr><td colspan="8" class="loading-row"><div class="spinner" style="width:28px;height:28px;margin:16px auto"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- VACCINES LIST (admin only) -->
+    <div id="vaccines-list-section" style="margin-top:24px;display:none">
+      <div class="card">
+        <div class="card-header">
+          <h3>📦 Available Vaccines</h3>
+          <button class="btn btn-outline btn-sm" onclick="openAddVaccine()">➕ Add Vaccine</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Vaccine Name</th><th>Total Doses</th><th>Interval (days)</th><th>Description</th><th>Action</th></tr></thead>
+            <tbody id="vaccines-tbody">
+              <tr><td colspan="5" class="loading-row">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ============ RECORD VACCINATION MODAL ============ -->
+<div class="modal-overlay" id="vacc-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Record Vaccination</h3>
+      <button class="btn-close" onclick="closeModal('vacc-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Patient *</label>
+        <select id="v-patient"></select>
+      </div>
+      <div class="form-group">
+        <label>Vaccine *</label>
+        <select id="v-vaccine" onchange="onVaccineChange()"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Dose Number *</label>
+          <select id="v-dose">
+            <option value="1">Dose 1</option>
+            <option value="2">Dose 2</option>
+            <option value="3">Dose 3</option>
+            <option value="4">Booster</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Batch / Lot Number</label>
+          <input id="v-batch" type="text" placeholder="e.g. LOT2024A" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date Administered *</label>
+          <input id="v-date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>Next Dose Due</label>
+          <input id="v-next-date" type="date" readonly style="background:var(--bg);color:var(--text-muted)" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Administered By (Nurse/Doctor)</label>
+        <input id="v-nurse" type="text" placeholder="Nurse Garcia" />
+      </div>
+      <div class="form-group">
+        <label>Site of Injection</label>
+        <select id="v-site">
+          <option value="">Not specified</option>
+          <option value="Left Arm">Left Arm</option>
+          <option value="Right Arm">Right Arm</option>
+          <option value="Left Thigh">Left Thigh</option>
+          <option value="Right Thigh">Right Thigh</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Remarks / Adverse Effects</label>
+        <textarea id="v-remarks" placeholder="Any reactions or notes…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('vacc-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveVaccination()">Save Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADD VACCINE MODAL ============ -->
+<div class="modal-overlay" id="vaccine-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add Vaccine</h3>
+      <button class="btn-close" onclick="closeModal('vaccine-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Vaccine Name *</label><input id="vac-name" type="text" placeholder="e.g. COVID-19 (Pfizer)" /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Number of Doses *</label><input id="vac-doses" type="number" min="1" max="10" value="2" /></div>
+        <div class="form-group"><label>Interval Between Doses (days)</label><input id="vac-interval" type="number" min="0" value="21" /></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="vac-desc" placeholder="Brief description of the vaccine…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('vaccine-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveVaccine()">Save Vaccine</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let currentRole = null;
+let currentUserId = null;
+let allVaccinations = [];
+let allVaccines = [];
+let allPatients = [];
+
+// ---- INIT ----
+auth.onAuthStateChanged(async (user) => {
+  if (!user) { window.location.href = "login.html"; return; }
+  currentUserId = user.uid;
+  currentRole = await getUserRole(user.uid);
+
+  const initials = user.displayName ? user.displayName.split(" ").map(n => n[0]).join("").slice(0,2) : "?";
+  document.getElementById("user-avatar").textContent = initials;
+  document.getElementById("user-name").textContent = user.displayName || user.email;
+  document.getElementById("user-role-label").textContent = { admin: "🔑 Admin", nurse: "🩺 Nurse", patient: "🙂 Patient" }[currentRole] || currentRole;
+
+  if (currentRole === "patient") {
+    document.getElementById("toolbar-area").style.display = "none";
+    document.getElementById("action-col").style.display = "none";
+    document.getElementById("table-title").textContent = "My Vaccination History";
+    document.getElementById("page-desc").textContent = "Your personal vaccination records.";
+  }
+
+  if (currentRole === "admin") {
+    document.getElementById("vaccines-list-section").style.display = "block";
+    loadVaccinesList();
+  }
+
+  await Promise.all([loadPatients(), loadVaccines()]);
+  loadVaccinations();
+});
+
+// ---- LOAD DATA ----
+async function loadPatients() {
+  const snap = await db.collection("patients").orderBy("fullName").get();
+  allPatients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const sel = document.getElementById("v-patient");
+  if (sel) {
+    sel.innerHTML = `<option value="">Select patient…</option>` +
+      allPatients.map(p => `<option value="${p.id}" data-name="${p.fullName}">${p.fullName} (${p.patientId || "—"})</option>`).join("");
+  }
+}
+
+async function loadVaccines() {
+  const snap = await db.collection("vaccines").orderBy("name").get();
+  allVaccines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const sel = document.getElementById("v-vaccine");
+  if (sel) {
+    sel.innerHTML = `<option value="">Select vaccine…</option>` +
+      allVaccines.map(v => `<option value="${v.id}" data-interval="${v.intervalDays}">${v.name}</option>`).join("");
+  }
+}
+
+async function loadVaccinations() {
+  let query;
+  if (currentRole === "patient") {
+    // find patient record for this user
+    const pSnap = await db.collection("patients").where("userId", "==", currentUserId).limit(1).get();
+    if (pSnap.empty) {
+      renderVaccinations([]);
+      return;
+    }
+    const patientId = pSnap.docs[0].id;
+    query = db.collection("vaccinations").where("patientId", "==", patientId).orderBy("administeredAt", "desc");
+  } else {
+    query = db.collection("vaccinations").orderBy("administeredAt", "desc");
+  }
+
+  try {
+    const snap = await query.get();
+    allVaccinations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderVaccinations(allVaccinations);
+  } catch (err) {
+    console.error(err);
+    showToast("Error loading vaccinations.", "error");
+  }
+}
+
+function renderVaccinations(vaccinations) {
+  const tbody = document.getElementById("vacc-tbody");
+  document.getElementById("vacc-count").textContent = `${vaccinations.length} record${vaccinations.length !== 1 ? "s" : ""}`;
+
+  if (!vaccinations.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">💉</div><p>No vaccination records found.</p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = vaccinations.map(v => `
+    <tr>
+      <td><strong>${v.patientName || "—"}</strong></td>
+      <td>${v.vaccineName || "—"}</td>
+      <td><span class="badge badge-nurse">Dose ${v.doseNumber || 1}</span></td>
+      <td><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px">${v.batchNumber || "—"}</code></td>
+      <td>${v.administeredBy || "—"}</td>
+      <td>${v.administeredAt ? (v.administeredAt.toDate ? v.administeredAt.toDate().toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"}) : v.administeredAt) : "—"}</td>
+      <td>${v.nextDoseDate || <span style="color:var(--text-muted)">N/A</span>}</td>
+      ${currentRole !== "patient" ? `<td><button class="btn btn-danger btn-sm" onclick="deleteVaccination('${v.id}')">🗑️</button></td>` : "<td>—</td>"}
+    </tr>`).join("");
+}
+
+// ---- SEARCH ----
+document.getElementById("search-input")?.addEventListener("input", (e) => {
+  const q = e.target.value.toLowerCase();
+  renderVaccinations(allVaccinations.filter(v =>
+    (v.patientName || "").toLowerCase().includes(q) ||
+    (v.vaccineName || "").toLowerCase().includes(q)
+  ));
+});
+
+// ---- VACCINE CHANGE → auto-calc next date ----
+function onVaccineChange() {
+  const sel = document.getElementById("v-vaccine");
+  const opt = sel.options[sel.selectedIndex];
+  const interval = parseInt(opt.dataset.interval || "0");
+  const dateVal = document.getElementById("v-date").value;
+  if (interval && dateVal) {
+    const d = new Date(dateVal);
+    d.setDate(d.getDate() + interval);
+    document.getElementById("v-next-date").value = d.toISOString().split("T")[0];
+  } else {
+    document.getElementById("v-next-date").value = "";
+  }
+}
+
+document.getElementById("v-date")?.addEventListener("change", onVaccineChange);
+
+// ---- OPEN MODAL ----
+function openAddVaccination() {
+  document.getElementById("v-date").value = new Date().toISOString().split("T")[0];
+  document.getElementById("v-next-date").value = "";
+  document.getElementById("v-batch").value = "";
+  document.getElementById("v-nurse").value = "";
+  document.getElementById("v-site").value = "";
+  document.getElementById("v-remarks").value = "";
+  document.getElementById("v-patient").value = "";
+  document.getElementById("v-vaccine").value = "";
+  document.getElementById("v-dose").value = "1";
+  document.getElementById("vacc-modal").classList.add("open");
+}
+
+// ---- SAVE VACCINATION ----
+async function saveVaccination() {
+  const patientSel = document.getElementById("v-patient");
+  const vaccineSel = document.getElementById("v-vaccine");
+  const patientId   = patientSel.value;
+  const patientName = patientSel.options[patientSel.selectedIndex]?.dataset.name || "";
+  const vaccineId   = vaccineSel.value;
+  const vaccineName = vaccineSel.options[vaccineSel.selectedIndex]?.text || "";
+  const doseNumber  = document.getElementById("v-dose").value;
+  const batchNumber = document.getElementById("v-batch").value.trim();
+  const adminDate   = document.getElementById("v-date").value;
+  const nextDate    = document.getElementById("v-next-date").value;
+  const nurse       = document.getElementById("v-nurse").value.trim();
+  const site        = document.getElementById("v-site").value;
+  const remarks     = document.getElementById("v-remarks").value.trim();
+
+  if (!patientId || !vaccineId || !adminDate) {
+    showToast("Patient, vaccine and date are required.", "error"); return;
+  }
+
+  try {
+    await db.collection("vaccinations").add({
+      patientId, patientName,
+      vaccineId, vaccineName,
+      doseNumber: parseInt(doseNumber),
+      batchNumber, nextDoseDate: nextDate,
+      administeredBy: nurse, injectionSite: site, remarks,
+      administeredAt: firebase.firestore.Timestamp.fromDate(new Date(adminDate)),
+      recordedBy: currentUserId,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    showToast("Vaccination recorded successfully!");
+    closeModal("vacc-modal");
+    loadVaccinations();
+  } catch (err) {
+    console.error(err);
+    showToast("Error saving vaccination.", "error");
+  }
+}
+
+async function deleteVaccination(id) {
+  if (!confirm("Delete this vaccination record?")) return;
+  try {
+    await db.collection("vaccinations").doc(id).delete();
+    showToast("Vaccination record deleted.");
+    loadVaccinations();
+  } catch { showToast("Error deleting record.", "error"); }
+}
+
+// ---- VACCINES LIST (admin) ----
+async function loadVaccinesList() {
+  const snap = await db.collection("vaccines").orderBy("name").get();
+  const tbody = document.getElementById("vaccines-tbody");
+  if (snap.empty) {
+    tbody.innerHTML = `<tr><td colspan="5" class="loading-row">No vaccines. Add one to get started.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = snap.docs.map(d => {
+    const v = d.data();
+    return `<tr>
+      <td><strong>${v.name}</strong></td>
+      <td>${v.doses}</td>
+      <td>${v.intervalDays || 0}</td>
+      <td style="max-width:200px;color:var(--text-muted);font-size:13px">${v.description || "—"}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteVaccine('${d.id}')">🗑️</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function openAddVaccine() {
+  ["vac-name","vac-desc"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("vac-doses").value = "2";
+  document.getElementById("vac-interval").value = "21";
+  document.getElementById("vaccine-modal").classList.add("open");
+}
+
+async function saveVaccine() {
+  const name     = document.getElementById("vac-name").value.trim();
+  const doses    = parseInt(document.getElementById("vac-doses").value);
+  const interval = parseInt(document.getElementById("vac-interval").value);
+  const desc     = document.getElementById("vac-desc").value.trim();
+
+  if (!name || !doses) { showToast("Vaccine name and doses required.", "error"); return; }
+
+  try {
+    await db.collection("vaccines").add({
+      name, doses, intervalDays: interval, description: desc,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    showToast("Vaccine added!");
+    closeModal("vaccine-modal");
+    loadVaccinesList();
+    loadVaccines(); // refresh dropdown
+  } catch { showToast("Error saving vaccine.", "error"); }
+}
+
+async function deleteVaccine(id) {
+  if (!confirm("Delete this vaccine type?")) return;
+  try {
+    await db.collection("vaccines").doc(id).delete();
+    showToast("Vaccine removed.");
+    loadVaccinesList();
+  } catch { showToast("Error.", "error"); }
+}
+
+// ---- MODAL ----
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-overlay").forEach(o => o.addEventListener("click", e => { if (e.target === o) o.classList.remove("open"); }));
+</script>
+</body>
+</html>

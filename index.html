@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediCare HMS — Hospital Management System</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .features-section {
+      background: white;
+      padding: 80px 40px;
+    }
+    .features-inner { max-width: 960px; margin: 0 auto; }
+    .section-heading { text-align: center; margin-bottom: 48px; }
+    .section-heading h2 { font-family: var(--font-display); font-size: 36px; color: var(--text); margin-bottom: 10px; }
+    .section-heading p { color: var(--text-muted); font-size: 16px; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+    .feat-card {
+      padding: 28px;
+      border-radius: var(--radius-lg);
+      border: 1.5px solid var(--border);
+      transition: box-shadow .2s, transform .2s;
+    }
+    .feat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .feat-card .icon { font-size: 36px; margin-bottom: 14px; }
+    .feat-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feat-card p { color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+    .roles-section { background: var(--bg); padding: 80px 40px; }
+    .roles-inner { max-width: 960px; margin: 0 auto; }
+    .roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px; }
+    .role-card { background: white; border-radius: var(--radius-lg); padding: 32px 24px; text-align: center; border: 1.5px solid var(--border); }
+    .role-card .role-icon { width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 18px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+    .role-card.admin .role-icon { background: #f0e8fb; }
+    .role-card.nurse .role-icon { background: var(--teal-pale); }
+    .role-card.patient .role-icon { background: var(--accent-lt); }
+    .role-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .role-card p { color: var(--text-muted); font-size: 14px; }
+    .site-footer { background: var(--teal-dark); color: rgba(255,255,255,.7); text-align: center; padding: 24px; font-size: 13px; }
+    @media (max-width: 700px) { .roles-grid { grid-template-columns: 1fr; } .features-section, .roles-section { padding: 56px 20px; } }
+  </style>
+</head>
+<body>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-content">
+      <span class="hero-icon">🏥</span>
+      <h1>MediCare HMS</h1>
+      <p>A complete hospital management system for patient records, vaccination tracking, and seamless clinical workflow.</p>
+      <div class="hero-btns">
+        <a href="login.html" class="btn btn-white">Sign In</a>
+        <a href="signup.html" class="btn btn-outline-white">Create Account</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features-section">
+    <div class="features-inner">
+      <div class="section-heading">
+        <h2>Everything You Need</h2>
+        <p>Built for small to medium healthcare facilities with simplicity in mind.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feat-card">
+          <div class="icon">👤</div>
+          <h3>Patient Management</h3>
+          <p>Register and manage patient profiles with complete medical history and contact information.</p>
+        </div>
+        <div class="feat-card">
+          <div class="icon">💉</div>
+          <h3>Vaccination Tracking</h3>
+          <p>Record and monitor vaccination schedules, doses, and history for all patients.</p>
+        </div>
+        <div class="feat-card">
+          <div class="icon">📋</div>
+          <h3>Medical Records</h3>
+          <p>Document diagnoses, treatments, and clinical notes securely in one place.</p>
+        </div>
+        <div class="feat-card">
+          <div class="icon">📊</div>
+          <h3>Reports & Analytics</h3>
+          <p>Generate summaries of patients, vaccinations, and medical activity at a glance.</p>
+        </div>
+        <div class="feat-card">
+          <div class="icon">🔐</div>
+          <h3>Role-Based Access</h3>
+          <p>Admin, Nurse, and Patient roles ensure data privacy and appropriate access control.</p>
+        </div>
+        <div class="feat-card">
+          <div class="icon">☁️</div>
+          <h3>Cloud-Powered</h3>
+          <p>Backed by Firebase Firestore for real-time sync and reliable data storage.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROLES -->
+  <section class="roles-section">
+    <div class="roles-inner">
+      <div class="section-heading">
+        <h2>Made for Your Team</h2>
+        <p>Each role gets a tailored experience.</p>
+      </div>
+      <div class="roles-grid">
+        <div class="role-card admin">
+          <div class="role-icon">👑</div>
+          <h3>Admin</h3>
+          <p>Manage users, view all records, and generate system-wide reports.</p>
+        </div>
+        <div class="role-card nurse">
+          <div class="role-icon">🩺</div>
+          <h3>Nurse</h3>
+          <p>Add patients, record vaccinations, and document medical records.</p>
+        </div>
+        <div class="role-card patient">
+          <div class="role-icon">🙂</div>
+          <h3>Patient</h3>
+          <p>View personal profile and vaccination history securely.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <p>MediCare HMS &copy; 2024 — A Student Project Demo &nbsp;|&nbsp; Built with Firebase &amp; Vanilla JS</p>
+  </footer>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</body>
+</html>

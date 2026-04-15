@@ -1,0 +1,64 @@
+// =============================================
+// FIRESTORE SECURITY RULES
+// Paste these in: Firebase Console > Firestore > Rules
+// =============================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: get user's role from Firestore
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin()   { return isAuth() && getRole() == 'admin'; }
+    function isNurse()   { return isAuth() && getRole() == 'nurse'; }
+    function isPatient() { return isAuth() && getRole() == 'patient'; }
+
+    // USERS collection
+    match /users/{userId} {
+      allow read:  if isAuth() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuth() && request.auth.uid == userId;
+      allow update: if isAuth() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // PATIENTS collection
+    match /patients/{patientId} {
+      allow read:   if isAuth();
+      allow create: if isAdmin() || isNurse();
+      allow update: if isAdmin() || isNurse();
+      allow delete: if isAdmin();
+    }
+
+    // VACCINES collection
+    match /vaccines/{vaccineId} {
+      allow read:   if isAuth();
+      allow create: if isAdmin() || isNurse();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // VACCINATIONS collection
+    match /vaccinations/{vaccinationId} {
+      allow read:   if isAuth();
+      allow create: if isAdmin() || isNurse();
+      allow update: if isAdmin() || isNurse();
+      allow delete: if isAdmin() || isNurse();
+    }
+
+    // MEDICAL RECORDS collection
+    match /medical_records/{recordId} {
+      allow read:   if isAuth();
+      allow create: if isAdmin() || isNurse();
+      allow update: if isAdmin() || isNurse();
+      allow delete: if isAdmin();
+    }
+  }
+}

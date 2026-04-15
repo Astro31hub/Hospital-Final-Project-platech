@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patients — MediCare HMS</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="logo-sm">🏥</div>
+      <h1>MediCare HMS</h1>
+    </div>
+    <div class="header-right">
+      <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="name" id="user-name">Loading…</div>
+          <div class="role" id="user-role-label">—</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="app-sidebar">
+    <div class="sidebar-section"><div class="sidebar-section-label">Navigation</div></div>
+    <a class="nav-link" href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+    <a class="nav-link active" href="patient.html"><span class="nav-icon">👤</span> Patients</a>
+    <a class="nav-link" href="vaccination.html"><span class="nav-icon">💉</span> Vaccinations</a>
+    <div class="sidebar-bottom">
+      <a class="nav-link" href="index.html"><span class="nav-icon">🏠</span> Home</a>
+      <a class="nav-link" href="#" onclick="logout()"><span class="nav-icon">🚪</span> Sign Out</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="app-main">
+    <div class="page-header">
+      <h2>👤 Patient Management</h2>
+      <p>Register patients and manage their medical records.</p>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar" id="toolbar-area">
+      <div class="search-bar">
+        <span class="icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search by name, ID or email…" />
+      </div>
+      <button class="btn btn-primary" id="add-patient-btn" onclick="openAddPatient()">➕ Add Patient</button>
+    </div>
+
+    <!-- PATIENTS TABLE -->
+    <div class="card">
+      <div class="card-header">
+        <h3 id="table-title">All Patients</h3>
+        <span id="patient-count" style="font-size:13px;color:var(--text-muted)">Loading…</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Patient ID</th>
+              <th>Name</th>
+              <th>DOB</th>
+              <th>Gender</th>
+              <th>Blood Type</th>
+              <th>Phone</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="patients-tbody">
+            <tr><td colspan="7" class="loading-row"><div class="spinner" style="margin:20px auto;width:28px;height:28px"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MEDICAL RECORDS SECTION (shown when patient selected) -->
+    <div id="records-section" style="margin-top:24px;display:none">
+      <div class="card">
+        <div class="card-header">
+          <h3>📋 Medical Records — <span id="selected-patient-name"></span></h3>
+          <button class="btn btn-primary btn-sm" onclick="openAddRecord()">➕ Add Record</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Diagnosis</th><th>Treatment</th><th>Doctor</th><th>Notes</th><th>Action</th></tr></thead>
+            <tbody id="records-tbody">
+              <tr><td colspan="6" class="loading-row">Select a patient to view records.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ============ ADD PATIENT MODAL ============ -->
+<div class="modal-overlay" id="patient-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Add New Patient</h3>
+      <button class="btn-close" onclick="closeModal('patient-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>First Name *</label><input id="p-firstName" type="text" placeholder="Juan" /></div>
+        <div class="form-group"><label>Last Name *</label><input id="p-lastName" type="text" placeholder="dela Cruz" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date of Birth *</label><input id="p-dob" type="date" /></div>
+        <div class="form-group">
+          <label>Gender *</label>
+          <select id="p-gender">
+            <option value="">Select…</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Blood Type</label>
+          <select id="p-blood">
+            <option value="">Unknown</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Phone Number</label><input id="p-phone" type="tel" placeholder="09XX-XXX-XXXX" /></div>
+      </div>
+      <div class="form-group"><label>Email Address</label><input id="p-email" type="email" placeholder="patient@email.com" /></div>
+      <div class="form-group"><label>Address</label><textarea id="p-address" placeholder="Street, City, Province…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('patient-modal')">Cancel</button>
+      <button class="btn btn-primary" id="save-patient-btn" onclick="savePatient()">Save Patient</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADD MEDICAL RECORD MODAL ============ -->
+<div class="modal-overlay" id="record-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add Medical Record</h3>
+      <button class="btn-close" onclick="closeModal('record-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Diagnosis *</label><input id="r-diagnosis" type="text" placeholder="e.g. Hypertension Stage 1" /></div>
+      <div class="form-group"><label>Treatment *</label><input id="r-treatment" type="text" placeholder="e.g. Amlodipine 5mg daily" /></div>
+      <div class="form-group"><label>Attending Doctor</label><input id="r-doctor" type="text" placeholder="Dr. Santos" /></div>
+      <div class="form-group"><label>Date of Visit *</label><input id="r-date" type="date" /></div>
+      <div class="form-group"><label>Clinical Notes</label><textarea id="r-notes" placeholder="Additional observations, follow-up instructions…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('record-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRecord()">Save Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let currentRole = null;
+let currentUserId = null;
+let editPatientId = null;
+let selectedPatientId = null;
+let allPatients = [];
+
+// ---- INIT ----
+auth.onAuthStateChanged(async (user) => {
+  if (!user) { window.location.href = "login.html"; return; }
+  currentUserId = user.uid;
+  currentRole = await getUserRole(user.uid);
+
+  const initials = user.displayName ? user.displayName.split(" ").map(n => n[0]).join("").slice(0,2) : "?";
+  document.getElementById("user-avatar").textContent = initials;
+  document.getElementById("user-name").textContent = user.displayName || user.email;
+  document.getElementById("user-role-label").textContent = { admin: "🔑 Admin", nurse: "🩺 Nurse", patient: "🙂 Patient" }[currentRole] || currentRole;
+
+  // Patients can't add patients
+  if (currentRole === "patient") {
+    document.getElementById("add-patient-btn").style.display = "none";
+    document.getElementById("toolbar-area").style.display = "none";
+  }
+
+  loadPatients();
+
+  // Check for #add hash
+  if (window.location.hash === "#add" && currentRole !== "patient") openAddPatient();
+});
+
+// ---- LOAD PATIENTS ----
+async function loadPatients() {
+  try {
+    let query = db.collection("patients").orderBy("createdAt", "desc");
+
+    // Patient can only see their own profile
+    if (currentRole === "patient") {
+      query = db.collection("patients").where("userId", "==", currentUserId);
+    }
+
+    const snap = await query.get();
+    allPatients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderPatients(allPatients);
+  } catch (err) {
+    console.error(err);
+    showToast("Error loading patients.", "error");
+  }
+}
+
+function renderPatients(patients) {
+  const tbody = document.getElementById("patients-tbody");
+  document.getElementById("patient-count").textContent = `${patients.length} patient${patients.length !== 1 ? "s" : ""}`;
+
+  if (!patients.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👤</div><p>No patients found. Add one to get started.</p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = patients.map(p => `
+    <tr>
+      <td><code style="font-size:12px;background:var(--bg);padding:2px 6px;border-radius:4px">${p.patientId || "—"}</code></td>
+      <td><strong>${p.fullName || "—"}</strong></td>
+      <td>${p.dateOfBirth || "—"}</td>
+      <td>${p.gender || "—"}</td>
+      <td>${p.bloodType ? `<span class="badge badge-warn">${p.bloodType}</span>` : "—"}</td>
+      <td>${p.phone || "—"}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="viewRecords('${p.id}','${p.fullName}')">📋 Records</button>
+        ${currentRole !== "patient" ? `
+          <button class="btn btn-ghost btn-sm" onclick="editPatient('${p.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePatient('${p.id}')">🗑️</button>` : ""}
+      </td>
+    </tr>`).join("");
+}
+
+// ---- SEARCH ----
+document.getElementById("search-input")?.addEventListener("input", (e) => {
+  const q = e.target.value.toLowerCase();
+  const filtered = allPatients.filter(p =>
+    (p.fullName || "").toLowerCase().includes(q) ||
+    (p.patientId || "").toLowerCase().includes(q) ||
+    (p.email || "").toLowerCase().includes(q)
+  );
+  renderPatients(filtered);
+});
+
+// ---- ADD / EDIT PATIENT ----
+function openAddPatient() {
+  editPatientId = null;
+  document.getElementById("modal-title").textContent = "Add New Patient";
+  ["p-firstName","p-lastName","p-dob","p-gender","p-blood","p-phone","p-email","p-address"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("patient-modal").classList.add("open");
+}
+
+async function editPatient(id) {
+  const p = allPatients.find(x => x.id === id);
+  if (!p) return;
+  editPatientId = id;
+  document.getElementById("modal-title").textContent = "Edit Patient";
+  document.getElementById("p-firstName").value = p.firstName || "";
+  document.getElementById("p-lastName").value  = p.lastName  || "";
+  document.getElementById("p-dob").value       = p.dateOfBirth || "";
+  document.getElementById("p-gender").value    = p.gender    || "";
+  document.getElementById("p-blood").value     = p.bloodType || "";
+  document.getElementById("p-phone").value     = p.phone     || "";
+  document.getElementById("p-email").value     = p.email     || "";
+  document.getElementById("p-address").value   = p.address   || "";
+  document.getElementById("patient-modal").classList.add("open");
+}
+
+async function savePatient() {
+  const firstName = document.getElementById("p-firstName").value.trim();
+  const lastName  = document.getElementById("p-lastName").value.trim();
+  const dob       = document.getElementById("p-dob").value;
+  const gender    = document.getElementById("p-gender").value;
+  const blood     = document.getElementById("p-blood").value;
+  const phone     = document.getElementById("p-phone").value.trim();
+  const email     = document.getElementById("p-email").value.trim();
+  const address   = document.getElementById("p-address").value.trim();
+
+  if (!firstName || !lastName || !dob || !gender) {
+    showToast("Please fill in required fields (marked with *).", "error"); return;
+  }
+
+  const btn = document.getElementById("save-patient-btn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  const data = {
+    firstName, lastName,
+    fullName: `${firstName} ${lastName}`,
+    dateOfBirth: dob, gender,
+    bloodType: blood, phone, email, address,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  try {
+    if (editPatientId) {
+      await db.collection("patients").doc(editPatientId).update(data);
+      showToast("Patient updated successfully!");
+    } else {
+      await db.collection("patients").add({
+        ...data,
+        patientId: generatePatientId(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      showToast("Patient added successfully!");
+    }
+    closeModal("patient-modal");
+    loadPatients();
+  } catch (err) {
+    console.error(err);
+    showToast("Error saving patient.", "error");
+  }
+  btn.disabled = false; btn.textContent = "Save Patient";
+}
+
+async function deletePatient(id) {
+  if (!confirm("Permanently delete this patient and their records?")) return;
+  try {
+    await db.collection("patients").doc(id).delete();
+    // Delete related records
+    const recs = await db.collection("medical_records").where("patientId", "==", id).get();
+    const batch = db.batch();
+    recs.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    showToast("Patient deleted.");
+    if (selectedPatientId === id) {
+      document.getElementById("records-section").style.display = "none";
+      selectedPatientId = null;
+    }
+    loadPatients();
+  } catch { showToast("Error deleting patient.", "error"); }
+}
+
+// ---- MEDICAL RECORDS ----
+async function viewRecords(patientId, patientName) {
+  selectedPatientId = patientId;
+  document.getElementById("selected-patient-name").textContent = patientName;
+  document.getElementById("records-section").style.display = "block";
+  document.getElementById("records-section").scrollIntoView({ behavior: "smooth" });
+  await loadRecords(patientId);
+}
+
+async function loadRecords(patientId) {
+  const tbody = document.getElementById("records-tbody");
+  tbody.innerHTML = `<tr><td colspan="6" class="loading-row"><div class="spinner" style="width:24px;height:24px;margin:8px auto"></div></td></tr>`;
+  try {
+    const snap = await db.collection("medical_records").where("patientId", "==", patientId).orderBy("visitDate", "desc").get();
+    if (snap.empty) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state" style="padding:32px"><div class="empty-icon">📋</div><p>No medical records yet.</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = snap.docs.map(d => {
+      const r = d.data();
+      return `<tr>
+        <td>${r.visitDate || "—"}</td>
+        <td>${r.diagnosis || "—"}</td>
+        <td>${r.treatment || "—"}</td>
+        <td>${r.doctor || "—"}</td>
+        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.notes || "—"}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteRecord('${d.id}','${patientId}')">🗑️</button></td>
+      </tr>`;
+    }).join("");
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="6" class="loading-row">Error loading records.</td></tr>`;
+  }
+}
+
+function openAddRecord() {
+  if (!selectedPatientId) { showToast("Please select a patient first.", "error"); return; }
+  ["r-diagnosis","r-treatment","r-doctor","r-notes"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("r-date").value = new Date().toISOString().split("T")[0];
+  document.getElementById("record-modal").classList.add("open");
+}
+
+async function saveRecord() {
+  const diagnosis  = document.getElementById("r-diagnosis").value.trim();
+  const treatment  = document.getElementById("r-treatment").value.trim();
+  const doctor     = document.getElementById("r-doctor").value.trim();
+  const visitDate  = document.getElementById("r-date").value;
+  const notes      = document.getElementById("r-notes").value.trim();
+
+  if (!diagnosis || !treatment || !visitDate) {
+    showToast("Diagnosis, treatment and date are required.", "error"); return;
+  }
+
+  const patient = allPatients.find(p => p.id === selectedPatientId);
+
+  try {
+    await db.collection("medical_records").add({
+      patientId: selectedPatientId,
+      patientName: patient?.fullName || "Unknown",
+      diagnosis, treatment, doctor, visitDate, notes,
+      recordedBy: currentUserId,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    showToast("Medical record saved!");
+    closeModal("record-modal");
+    loadRecords(selectedPatientId);
+  } catch (err) {
+    console.error(err);
+    showToast("Error saving record.", "error");
+  }
+}
+
+async function deleteRecord(recordId, patientId) {
+  if (!confirm("Delete this medical record?")) return;
+  try {
+    await db.collection("medical_records").doc(recordId).delete();
+    showToast("Record deleted.");
+    loadRecords(patientId);
+  } catch { showToast("Error deleting record.", "error"); }
+}
+
+// ---- MODAL ----
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+// Close modal on overlay click
+document.querySelectorAll(".modal-overlay").forEach(overlay => {
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.classList.remove("open");
+  });
+});
+</script>
+</body>
+</html>

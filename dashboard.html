@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — MediCare HMS</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="logo-sm">🏥</div>
+      <h1>MediCare HMS</h1>
+    </div>
+    <div class="header-right">
+      <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="name" id="user-name">Loading…</div>
+          <div class="role" id="user-role-label">—</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="app-sidebar" id="sidebar">
+    <!-- Populated by JS based on role -->
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="app-main" id="main-content">
+    <div style="text-align:center;padding:60px"><div class="spinner"></div><p style="color:var(--text-muted);margin-top:16px">Loading dashboard…</p></div>
+  </main>
+
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+// ---- NAV CONFIG ----
+const navConfig = {
+  admin: [
+    { label: "Overview", icon: "📊", section: "overview" },
+    { label: "Manage Users", icon: "👥", section: "users" },
+    { label: "All Patients", icon: "🗂️", section: "patients-admin", href: "patient.html" },
+    { label: "Vaccinations", icon: "💉", section: "vaccinations", href: "vaccination.html" },
+    { label: "Reports", icon: "📈", section: "reports" },
+  ],
+  nurse: [
+    { label: "Overview", icon: "📊", section: "overview" },
+    { label: "Patients", icon: "👤", section: "patients", href: "patient.html" },
+    { label: "Add Patient", icon: "➕", section: "add-patient", href: "patient.html#add" },
+    { label: "Vaccinations", icon: "💉", section: "vaccinations", href: "vaccination.html" },
+    { label: "Medical Records", icon: "📋", section: "medical-records", href: "patient.html#records" },
+  ],
+  patient: [
+    { label: "My Profile", icon: "🙂", section: "profile" },
+    { label: "My Vaccinations", icon: "💉", section: "my-vaccinations", href: "vaccination.html" },
+  ],
+};
+
+let currentUser = null;
+let currentRole = null;
+
+// ---- INIT ----
+auth.onAuthStateChanged(async (user) => {
+  if (!user) { window.location.href = "login.html"; return; }
+  currentUser = user;
+  const role = await getUserRole(user.uid);
+  currentRole = role;
+
+  // Header info
+  const initials = user.displayName ? user.displayName.split(" ").map(n => n[0]).join("").slice(0,2) : "?";
+  document.getElementById("user-avatar").textContent = initials;
+  document.getElementById("user-name").textContent = user.displayName || user.email;
+  const roleBadge = { admin: "🔑 Admin", nurse: "🩺 Nurse", patient: "🙂 Patient" };
+  document.getElementById("user-role-label").textContent = roleBadge[role] || role;
+
+  buildSidebar(role);
+  loadSection("overview", role);
+});
+
+// ---- SIDEBAR ----
+function buildSidebar(role) {
+  const links = navConfig[role] || [];
+  const sidebar = document.getElementById("sidebar");
+  sidebar.innerHTML = `<div class="sidebar-section"><div class="sidebar-section-label">Navigation</div></div>`;
+  links.forEach(link => {
+    const a = document.createElement("a");
+    a.className = "nav-link" + (link.section === "overview" ? " active" : "");
+    a.href = link.href || "#";
+    a.dataset.section = link.section;
+    a.innerHTML = `<span class="nav-icon">${link.icon}</span> ${link.label}`;
+    if (!link.href) {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+        a.classList.add("active");
+        loadSection(link.section, role);
+      });
+    }
+    sidebar.appendChild(a);
+  });
+  const bottom = document.createElement("div");
+  bottom.className = "sidebar-bottom";
+  bottom.innerHTML = `<a class="nav-link" href="index.html"><span class="nav-icon">🏠</span> Home</a>
+  <a class="nav-link" href="#" onclick="logout()"><span class="nav-icon">🚪</span> Sign Out</a>`;
+  sidebar.appendChild(bottom);
+}
+
+// ---- SECTION ROUTER ----
+async function loadSection(section, role) {
+  const main = document.getElementById("main-content");
+  main.innerHTML = `<div class="spinner"></div>`;
+  if (section === "overview") await renderOverview(role, main);
+  else if (section === "users") await renderUsers(main);
+  else if (section === "reports") await renderReports(main);
+  else if (section === "profile") await renderPatientProfile(main);
+  else main.innerHTML = `<div class="empty-state"><div class="empty-icon">🔗</div><p>This section opens in a new page.</p></div>`;
+}
+
+// =============================================
+// OVERVIEW
+// =============================================
+async function renderOverview(role, main) {
+  const [pSnap, vSnap, mSnap, uSnap] = await Promise.all([
+    db.collection("patients").get(),
+    db.collection("vaccinations").get(),
+    db.collection("medical_records").get(),
+    db.collection("users").get(),
+  ]);
+
+  const statsHTML = role === "patient" ? "" : `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon teal">👤</div>
+        <div class="stat-info"><div class="stat-num">${pSnap.size}</div><div class="stat-label">Total Patients</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange">💉</div>
+        <div class="stat-info"><div class="stat-num">${vSnap.size}</div><div class="stat-label">Vaccinations</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">📋</div>
+        <div class="stat-info"><div class="stat-num">${mSnap.size}</div><div class="stat-label">Medical Records</div></div>
+      </div>
+      ${role === "admin" ? `<div class="stat-card"><div class="stat-icon purple">👥</div><div class="stat-info"><div class="stat-num">${uSnap.size}</div><div class="stat-label">System Users</div></div></div>` : ""}
+    </div>`;
+
+  // Recent vaccinations
+  const recent = vSnap.docs.slice(0, 5);
+  const rows = recent.map(d => {
+    const v = d.data();
+    return `<tr><td>${v.patientName || "—"}</td><td>${v.vaccineName || "—"}</td><td>${v.doseNumber || 1}</td><td>${formatDate(v.administeredAt)}</td><td><span class="badge badge-success">Recorded</span></td></tr>`;
+  }).join("") || `<tr><td colspan="5" class="loading-row">No vaccinations recorded yet.</td></tr>`;
+
+  const greetName = currentUser?.displayName?.split(" ")[0] || "there";
+
+  main.innerHTML = `
+    <div class="page-header">
+      <h2>👋 Hello, ${greetName}!</h2>
+      <p>${new Date().toLocaleDateString("en-US", {weekday:"long", year:"numeric", month:"long", day:"numeric"})}</p>
+    </div>
+    ${statsHTML}
+    <div class="card">
+      <div class="card-header">
+        <h3>💉 Recent Vaccinations</h3>
+        <a href="vaccination.html" class="btn btn-outline btn-sm">View All</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Patient</th><th>Vaccine</th><th>Dose</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// =============================================
+// ADMIN — USERS
+// =============================================
+async function renderUsers(main) {
+  const snap = await db.collection("users").orderBy("createdAt", "desc").get();
+  const roleColors = { admin: "badge-admin", nurse: "badge-nurse", patient: "badge-patient" };
+
+  const rows = snap.docs.map(d => {
+    const u = d.data();
+    return `<tr>
+      <td>${u.fullName || "—"}</td>
+      <td>${u.email}</td>
+      <td><span class="badge ${roleColors[u.role] || "badge-warn"}">${u.role || "unknown"}</span></td>
+      <td>${formatDate(u.createdAt)}</td>
+      <td>
+        <button class="btn btn-danger btn-sm btn-icon" title="Delete user" onclick="deleteUser('${d.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="5" class="loading-row">No users found.</td></tr>`;
+
+  main.innerHTML = `
+    <div class="page-header"><h2>👥 Manage Users</h2><p>All registered system users.</p></div>
+    <div class="card">
+      <div class="card-header"><h3>Users (${snap.size})</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Action</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function deleteUser(docId) {
+  if (!confirm("Delete this user from Firestore? (Auth account remains.)")) return;
+  try {
+    await db.collection("users").doc(docId).delete();
+    showToast("User removed from database.");
+    renderUsers(document.getElementById("main-content"));
+  } catch { showToast("Could not delete user.", "error"); }
+}
+
+// =============================================
+// ADMIN — REPORTS
+// =============================================
+async function renderReports(main) {
+  const [pSnap, vSnap, mSnap, uSnap] = await Promise.all([
+    db.collection("patients").get(),
+    db.collection("vaccinations").get(),
+    db.collection("medical_records").get(),
+    db.collection("users").get(),
+  ]);
+
+  const roleCount = {};
+  uSnap.docs.forEach(d => { const r = d.data().role || "unknown"; roleCount[r] = (roleCount[r] || 0) + 1; });
+
+  const vaccineCount = {};
+  vSnap.docs.forEach(d => { const n = d.data().vaccineName || "Unknown"; vaccineCount[n] = (vaccineCount[n] || 0) + 1; });
+
+  const vcRows = Object.entries(vaccineCount).sort((a,b) => b[1]-a[1])
+    .map(([n,c]) => `<tr><td>${n}</td><td>${c}</td></tr>`).join("") || "<tr><td colspan='2'>No data</td></tr>";
+
+  main.innerHTML = `
+    <div class="page-header"><h2>📈 System Reports</h2><p>Overview of all system activity.</p></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon teal">👤</div><div class="stat-info"><div class="stat-num">${pSnap.size}</div><div class="stat-label">Patients</div></div></div>
+      <div class="stat-card"><div class="stat-icon orange">💉</div><div class="stat-info"><div class="stat-num">${vSnap.size}</div><div class="stat-label">Vaccinations</div></div></div>
+      <div class="stat-card"><div class="stat-icon green">📋</div><div class="stat-info"><div class="stat-num">${mSnap.size}</div><div class="stat-label">Medical Records</div></div></div>
+      <div class="stat-card"><div class="stat-icon purple">👥</div><div class="stat-info"><div class="stat-num">${uSnap.size}</div><div class="stat-label">Total Users</div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex-wrap:wrap">
+      <div class="card">
+        <div class="card-header"><h3>👥 Users by Role</h3></div>
+        <div class="card-body">
+          ${Object.entries(roleCount).map(([r,c]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+              <span class="badge badge-${r}">${r}</span>
+              <strong>${c}</strong>
+            </div>`).join("")}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>💉 Top Vaccines</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Vaccine</th><th>Times Administered</th></tr></thead>
+            <tbody>${vcRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// =============================================
+// PATIENT — PROFILE
+// =============================================
+async function renderPatientProfile(main) {
+  const snap = await db.collection("patients").where("userId", "==", currentUser.uid).limit(1).get();
+  if (snap.empty) {
+    main.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><p>No patient profile linked to your account.</p></div>`;
+    return;
+  }
+  const p = snap.docs[0].data();
+  main.innerHTML = `
+    <div class="page-header"><h2>My Profile</h2></div>
+    <div class="profile-card">
+      <div class="profile-avatar">${p.firstName?.[0] || "?"}${p.lastName?.[0] || ""}</div>
+      <div class="profile-info">
+        <div class="name">${p.fullName}</div>
+        <div class="meta">
+          <span>📧 ${p.email}</span>
+          <span>🩸 ${p.bloodType || "Not set"}</span>
+          <span>🆔 ${p.patientId || "—"}</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Personal Information</h3></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div><strong>Date of Birth</strong><p style="color:var(--text-muted);margin-top:4px">${p.dateOfBirth || "Not provided"}</p></div>
+          <div><strong>Gender</strong><p style="color:var(--text-muted);margin-top:4px">${p.gender || "Not provided"}</p></div>
+          <div><strong>Phone</strong><p style="color:var(--text-muted);margin-top:4px">${p.phone || "Not provided"}</p></div>
+          <div><strong>Blood Type</strong><p style="color:var(--text-muted);margin-top:4px">${p.bloodType || "Not provided"}</p></div>
+          <div style="grid-column:1/-1"><strong>Address</strong><p style="color:var(--text-muted);margin-top:4px">${p.address || "Not provided"}</p></div>
+        </div>
+      </div>
+    </div>`;
+}
+</script>
+</body>
+</html>

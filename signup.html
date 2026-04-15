@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Account — MediCare HMS</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="auth-body">
+
+  <!-- VISUAL PANEL (left) -->
+  <div class="auth-visual">
+    <div class="auth-visual-content">
+      <span class="big-icon">👨‍⚕️</span>
+      <h2>Join MediCare HMS</h2>
+      <p>Create your account and start managing patient care efficiently and securely.</p>
+      <div class="auth-features">
+        <div class="auth-feature"><div class="feat-icon">📧</div><span>Email Verification Required</span></div>
+        <div class="auth-feature"><div class="feat-icon">👥</div><span>Three Role Types Available</span></div>
+        <div class="auth-feature"><div class="feat-icon">🛡️</div><span>Data Privacy Guaranteed</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM PANEL -->
+  <div class="auth-panel">
+    <div class="auth-brand">
+      <div class="logo-icon">🏥</div>
+      <h1>MediCare HMS <span>Hospital Management System</span></h1>
+    </div>
+
+    <h2 class="auth-heading">Create your account</h2>
+    <p class="auth-sub">Fill in the details below to get started.</p>
+
+    <div id="success-msg" class="alert alert-info" style="display:none">
+      ✅ Account created! Please check your email to verify your account, then <a href="login.html">sign in</a>.
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>First Name</label>
+        <input type="text" id="firstName" placeholder="Juan" />
+      </div>
+      <div class="form-group">
+        <label>Last Name</label>
+        <input type="text" id="lastName" placeholder="dela Cruz" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Email Address</label>
+      <div class="input-icon-wrap">
+        <span class="inp-icon">✉️</span>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Role</label>
+      <select id="role">
+        <option value="">Select your role…</option>
+        <option value="patient">Patient</option>
+        <option value="nurse">Nurse / Staff</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Min. 6 characters" autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="confirmPassword" placeholder="Repeat password" autocomplete="new-password" />
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="signup-btn">Create Account</button>
+
+    <p style="text-align:center; margin-top:24px; font-size:14px; color:var(--text-muted);">
+      Already have an account? <a href="login.html">Sign in</a>
+    </p>
+    <p style="text-align:center; margin-top:8px;">
+      <a href="index.html" style="font-size:13px; color:var(--text-muted);">← Back to Home</a>
+    </p>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    redirectIfLoggedIn();
+
+    const signupBtn = document.getElementById("signup-btn");
+
+    signupBtn.addEventListener("click", async () => {
+      const firstName = document.getElementById("firstName").value.trim();
+      const lastName  = document.getElementById("lastName").value.trim();
+      const email     = document.getElementById("email").value.trim();
+      const role      = document.getElementById("role").value;
+      const password  = document.getElementById("password").value;
+      const confirm   = document.getElementById("confirmPassword").value;
+
+      if (!firstName || !lastName || !email || !role || !password || !confirm) {
+        showToast("Please fill in all fields.", "error"); return;
+      }
+      if (!isValidEmail(email)) { showToast("Enter a valid email address.", "error"); return; }
+      if (password.length < 6) { showToast("Password must be at least 6 characters.", "error"); return; }
+      if (password !== confirm) { showToast("Passwords do not match.", "error"); return; }
+
+      signupBtn.disabled = true; signupBtn.textContent = "Creating account…";
+
+      try {
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        const user = cred.user;
+
+        // Update display name
+        await user.updateProfile({ displayName: `${firstName} ${lastName}` });
+
+        // Send email verification
+        await user.sendEmailVerification();
+
+        // Save user to Firestore
+        await db.collection("users").doc(user.uid).set({
+          uid: user.uid,
+          firstName,
+          lastName,
+          fullName: `${firstName} ${lastName}`,
+          email,
+          role,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          emailVerified: false,
+        });
+
+        // If patient, create patient profile stub
+        if (role === "patient") {
+          await db.collection("patients").add({
+            userId: user.uid,
+            firstName,
+            lastName,
+            fullName: `${firstName} ${lastName}`,
+            email,
+            patientId: generatePatientId(),
+            dateOfBirth: "",
+            gender: "",
+            phone: "",
+            address: "",
+            bloodType: "",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+
+        await auth.signOut();
+        document.getElementById("success-msg").style.display = "flex";
+        signupBtn.disabled = false; signupBtn.textContent = "Create Account";
+
+      } catch (err) {
+        let msg = "Registration failed.";
+        if (err.code === "auth/email-already-in-use") msg = "This email is already registered.";
+        if (err.code === "auth/weak-password") msg = "Password is too weak.";
+        showToast(msg, "error");
+        signupBtn.disabled = false; signupBtn.textContent = "Create Account";
+      }
+    });
+  </script>
+</body>
+</html>
